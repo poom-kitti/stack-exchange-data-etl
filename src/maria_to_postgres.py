@@ -1,12 +1,12 @@
 import os
 
 import dotenv
-import pyspark.sql.functions as F
 from pyspark import SparkConf
 from pyspark.sql import DataFrame, SparkSession
 
 from .schema import orig_schema
 from .utils import logger as _logger
+from .utils.pyspark_utils import JDBCConnectionConfig
 
 # Load dotenv
 dotenv.load_dotenv(dotenv.find_dotenv())
@@ -20,31 +20,31 @@ conf.set("spark.jars", "jdbc_driver/mysql-connector-java-8.0.28.jar,jdbc_driver/
 spark = SparkSession.builder.config(conf=conf).appName("data_preparation").master("local[*]").getOrCreate()
 
 
-def read_table_from_maria_db(spark: SparkSession, table_name: str) -> DataFrame:
+def read_table_from_maria_db(table_name: str, connection_config: JDBCConnectionConfig) -> DataFrame:
     """Read a given table from MariaDB as a spark dataframe."""
     # Connection to source database is given in
     # https://relational.fit.cvut.cz/dataset/Stats.
     return spark.read.jdbc(
-        url="jdbc:mysql://relational.fit.cvut.cz:3306/stats",
+        url=f"jdbc:mysql://{connection_config.hostname}:{connection_config.port}/{connection_config.db_name}",
         table=table_name,
         properties={
-            "user": "guest",
-            "password": "relational",
+            "user": connection_config.username,
+            "password": connection_config.password,
             "driver": "com.mysql.cj.jdbc.Driver",
             "fetchsize": "10000",
         },
     )
 
 
-def write_df_to_postgres(df: DataFrame, table_name: str) -> None:
+def write_df_to_postgres(df: DataFrame, table_name: str, connection_config: JDBCConnectionConfig) -> None:
     """Write the dataframe to Postgres."""
     df.write.jdbc(
-        url=f"jdbc:postgresql://{os.getenv('POSTGRES_HOSTNAME')}:{os.getenv('POSTGRES_PORT')}/{os.getenv('POSTGRES_DATABASE')}",
+        url=f"jdbc:postgresql://{connection_config.hostname}:{connection_config.port}/{connection_config.db_name}",
         table=table_name,
         mode="overwrite",
         properties={
-            "user": os.getenv("POSTGRES_USER"),
-            "password": os.getenv("POSTGRES_PASSWORD"),
+            "user": connection_config.username,
+            "password": connection_config.password,
             "driver": "org.postgresql.Driver",
             "batchsize": "10000",
         },  # type: ignore
@@ -55,11 +55,22 @@ def main() -> None:
     """Main entry point."""
     logger.info("Initializing task to copy tables in stats database from MariaDB to Postgres.")
 
+    source_db_config = JDBCConnectionConfig(
+        hostname="relational.fit.cvut.cz", port="3306", username="guest", password="relational", db_name="stats"
+    )
+    destination_db_config = JDBCConnectionConfig(
+        hostname=os.environ["POSTGRES_HOSTNAME"],
+        port=os.environ["POSTGRES_PORT"],
+        username=os.environ["POSTGRES_USER"],
+        password=os.environ["POSTGRES_PASSWORD"],
+        db_name=os.environ["POSTGRES_DATABASE"],
+    )
+
     for table_name in orig_schema.table_names:
         logger.info("Copying table (%s) from MariaDB to Postgres.", table_name)
 
-        df = read_table_from_maria_db(spark, table_name)
-        write_df_to_postgres(df, table_name)
+        df = read_table_from_maria_db(table_name, source_db_config)
+        write_df_to_postgres(df, table_name, destination_db_config)
 
         logger.info("Finish copying table (%s) from MariaDB to Postgres.", table_name)
 
