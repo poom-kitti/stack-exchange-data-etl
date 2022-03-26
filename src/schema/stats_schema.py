@@ -1,262 +1,314 @@
-"""This module contains the schema to the `stats` database residing in MS SQL."""
-from dataclasses import dataclass, field
-from datetime import date, datetime
+from sqlalchemy import INTEGER, TIMESTAMP, VARCHAR, Column, ForeignKey
+from sqlalchemy.schema import MetaData
+from sqlalchemy.sql import functions as func
 
-from sqlalchemy import DATE, INTEGER, TIMESTAMP, VARCHAR
-from sqlalchemy.schema import ForeignKeyConstraint, PrimaryKeyConstraint
-
-from . import AlchemyTable
+from . import Base
 
 
-@dataclass(frozen=True)
-class Badges(AlchemyTable):
-    table_name = "badges"
-    table_constraints = [
-        PrimaryKeyConstraint("badge_id", name="pk_badges"),
-        ForeignKeyConstraint(
-            ["user_id"],
-            ["users.user_id"],
-            onupdate="CASCADE",
-            ondelete="CASCADE",
+# Declarative base class
+class BaseStats(Base):
+    """A base class for tables in `stats` database."""
+
+    __abstract__ = True
+    metadata = MetaData()
+
+
+class Users(BaseStats):
+    """A metaclass for `users` table."""
+
+    __tablename__ = "users"
+
+    user_id = Column(INTEGER, primary_key=True, autoincrement=False)
+    display_id = Column(INTEGER)
+    display_name = Column(VARCHAR(255), nullable=False)
+    age = Column(INTEGER)
+    about_me = Column(VARCHAR(None))
+    location = Column(VARCHAR(255))
+    website_url = Column(VARCHAR(255))
+    profile_image_url = Column(VARCHAR(255))
+    reputation = Column(INTEGER, default=0)
+    views = Column(INTEGER, default=0)
+    up_votes = Column(INTEGER, default=0)
+    down_votes = Column(INTEGER, default=0)
+    created_time = Column(TIMESTAMP, server_default=func.now())
+    last_accessed_time = Column(TIMESTAMP)
+
+
+class Badges(BaseStats):
+    """A metaclass for `badges` table."""
+
+    __tablename__ = "badges"
+
+    badge_id = Column(INTEGER, primary_key=True, autoincrement=False)
+    name = Column(VARCHAR(255), nullable=False)
+
+
+class UsersBadges(BaseStats):
+    """A metaclass for `users_badges` table."""
+
+    __tablename__ = "users_badges"
+
+    user_id = Column(
+        INTEGER,
+        ForeignKey(Users.user_id, name="fk_usersBadges_users_user_id", onupdate="CASCADE", ondelete="CASCADE"),
+        primary_key=True,
+        autoincrement=False,
+    )
+    badge_id = Column(
+        INTEGER,
+        ForeignKey(Badges.badge_id, name="fk_usersBadges_badges_badge_id", onupdate="CASCADE", ondelete="CASCADE"),
+        primary_key=True,
+        autoincrement=False,
+    )
+    granted_time = Column(TIMESTAMP, server_default=func.now())
+
+
+class PostTypes(BaseStats):
+    """A metaclass for `post_types` table."""
+
+    __tablename__ = "post_types"
+
+    post_type_id = Column(INTEGER, primary_key=True, autoincrement=False)
+    name = Column(VARCHAR(255), nullable=False)
+    description = Column(VARCHAR(None))
+
+
+class Posts(BaseStats):
+    """A metaclass for `posts` table."""
+
+    __tablename__ = "posts"
+
+    post_id = Column(INTEGER, primary_key=True, autoincrement=False)
+    post_type_id = Column(
+        INTEGER,
+        ForeignKey(
+            PostTypes.post_type_id,
+            name="fk_posts_postTypes_post_type_id",
             use_alter=True,
-            name="fk_badges_users_user_id",
-        ),
-    ]
-
-    badge_id: int = field(metadata={"name": "badge_id", "type_": INTEGER()})
-    user_id: int = field(metadata={"name": "user_id", "type_": INTEGER()})
-    name: str = field(metadata={"name": "bagde_name", "type_": VARCHAR()})
-    granted_time: datetime = field(metadata={"name": "granted_time", "type_": TIMESTAMP()})
-
-
-@dataclass(frozen=True)
-class Comments(AlchemyTable):
-    table_name = "comments"
-    table_constraints = [
-        PrimaryKeyConstraint("comment_id", name="pk_comments"),
-        ForeignKeyConstraint(
-            ["post_id"],
-            ["posts.post_id"],
-            onupdate="CASCADE",
-            ondelete="CASCADE",
-            use_alter=True,
-            name="fk_comments_posts_post_id",
-        ),
-        ForeignKeyConstraint(
-            ["user_id"],
-            ["users.user_id"],
-            onupdate="CASCADE",
-            ondelete="SET NULL",
-            use_alter=True,
-            name="fk_comments_users_user_id",
-        ),
-    ]
-
-    comment_id: int = field(metadata={"name": "comment_id", "type_": INTEGER()})
-    post_id: int = field(metadata={"name": "post_id", "type_": INTEGER()})
-    score: int = field(metadata={"name": "score", "type_": INTEGER()})
-    text: str = field(metadata={"name": "text", "type_": VARCHAR()})
-    created_time: datetime = field(metadata={"name": "created_time", "type_": TIMESTAMP()})
-    user_id: datetime = field(metadata={"name": "user_id", "type_": TIMESTAMP()})
-    user_display_name: str = field(metadata={"name": "user_display_name", "type_": VARCHAR()})
-
-
-@dataclass(frozen=True)
-class PostHistories(AlchemyTable):
-    table_name = "post_histories"
-    table_constraints = [
-        PrimaryKeyConstraint("post_history_id", name="pk_postHistories"),
-        ForeignKeyConstraint(
-            ["post_id"],
-            ["posts.post_id"],
-            onupdate="CASCADE",
-            ondelete="CASCADE",
-            use_alter=True,
-            name="fk_postHistories_posts_post_id",
-        ),
-        ForeignKeyConstraint(
-            ["user_id"],
-            ["users.user_id"],
-            onupdate="CASCADE",
-            ondelete="SET NULL",
-            use_alter=True,
-            name="fk_postHistories_users_user_id",
-        ),
-    ]
-
-    post_history_id: int = field(metadata={"name": "post_history_id", "type_": INTEGER()})
-    post_history_type_id: int = field(metadata={"name": "post_history_type_id", "type_": INTEGER()})
-    post_id: int = field(metadata={"name": "post_id", "type_": INTEGER()})
-    revision_guid: str = field(metadata={"name": "revision_guid", "type_": VARCHAR()})
-    user_id: int = field(metadata={"name": "user_id", "type_": INTEGER()})
-    user_display_name: str = field(metadata={"name": "user_id", "type_": VARCHAR()})
-    text: str = field(metadata={"name": "text", "type_": VARCHAR()})
-    comment: str = field(metadata={"name": "comment", "type_": VARCHAR()})
-    created_time: datetime = field(metadata={"name": "created_time", "type_": TIMESTAMP()})
-
-
-@dataclass(frozen=True)
-class PostLinks(AlchemyTable):
-    table_name = "post_links"
-    table_constraints = [
-        PrimaryKeyConstraint("post_link_id", name="pk_postLinks"),
-        ForeignKeyConstraint(
-            ["post_id"],
-            ["posts.post_id"],
-            onupdate="CASCADE",
-            ondelete="CASCADE",
-            use_alter=True,
-            name="fk_postLinks_posts_post_id",
-        ),
-    ]
-
-    post_link_id: int = field(metadata={"name": "post_link_id", "type_": INTEGER()})
-    link_type_id: int = field(metadata={"name": "link_type_id", "type_": INTEGER()})
-    post_id: int = field(metadata={"name": "post_id", "type_": INTEGER()})
-    related_post_id: int = field(metadata={"name": "related_post_id", "type_": INTEGER()})
-    created_time: datetime = field(metadata={"name": "created_time", "type_": TIMESTAMP()})
-
-
-@dataclass(frozen=True)
-class Posts(AlchemyTable):
-    table_name = "posts"
-    table_constraints = [
-        PrimaryKeyConstraint("post_id", name="pk_posts"),
-        ForeignKeyConstraint(
-            ["post_type_id"],
-            ["users.user_id"],
             onupdate="CASCADE",
             ondelete="SET NULL",
+        ),
+        nullable=False,
+    )
+    accepted_answer_id = Column(
+        INTEGER,
+        ForeignKey(
+            "posts.post_id",
+            name="fk_posts_posts_accepted_answer_id",
             use_alter=True,
+            onupdate="CASCADE",
+            ondelete="SET NULL",
+        ),
+    )
+    owner_user_id = Column(
+        INTEGER,
+        ForeignKey(
+            Users.user_id, name="fk_posts_users_owner_user_id", use_alter=True, onupdate="CASCADE", ondelete="SET NULL"
+        ),
+    )
+    owner_diplay_name = Column(VARCHAR(255))
+    title = Column(VARCHAR(None))
+    body = Column(VARCHAR(None))
+    score = Column(INTEGER, default=0)
+    view_count = Column(INTEGER, default=0)
+    answer_count = Column(INTEGER, default=0)
+    comment_count = Column(INTEGER, default=0)
+    favorite_count = Column(INTEGER, default=0)
+    last_editor_user_id = Column(
+        INTEGER,
+        ForeignKey(
+            Users.user_id,
             name="fk_posts_users_last_editor_user_id",
-        ),
-        ForeignKeyConstraint(
-            ["accepted_answer_id"],
-            ["post_id"],
+            use_alter=True,
             onupdate="CASCADE",
             ondelete="SET NULL",
-            use_alter=True,
-            name="fk_posts_accepted_answer_id",
         ),
-        ForeignKeyConstraint(
-            ["owner_user_id"],
-            ["users.user_id"],
-            onupdate="CASCADE",
-            ondelete="SET NULL",
-            use_alter=True,
-            name="fk_posts_users_owner_user_id",
+    )
+    last_editor_display_name = Column(VARCHAR(255))
+    created_time = Column(TIMESTAMP, server_default=func.now())
+    last_activity_time = Column(TIMESTAMP, onupdate=func.now())
+    last_edited_time = Column(TIMESTAMP)
+    community_owned_time = Column(TIMESTAMP)
+    closed_time = Column(TIMESTAMP)
+
+
+class PostsAnswers(BaseStats):
+    """A metaclass for `posts_answers` table."""
+
+    __tablename__ = "posts_answers"
+
+    post_id = Column(
+        INTEGER,
+        ForeignKey(Posts.post_id, name="fk_postsAnswers_posts_post_id", onupdate="CASCADE", ondelete="CASCADE"),
+        primary_key=True,
+        autoincrement=False,
+    )
+    answer_post_id = Column(
+        INTEGER,
+        ForeignKey(Posts.post_id, name="fk_postsAnswers_posts_answer_post_id", onupdate="CASCADE", ondelete="CASCADE"),
+        primary_key=True,
+        autoincrement=False,
+    )
+    answered_time = Column(TIMESTAMP, server_default=func.now())
+
+
+class Comments(BaseStats):
+    """A metaclass for `comments` table."""
+
+    __tablename__ = "comments"
+
+    comment_id = Column(INTEGER, primary_key=True, autoincrement=False)
+    post_id = Column(
+        INTEGER,
+        ForeignKey(
+            Posts.post_id, name="fk_comments_posts_post_id", use_alter=True, onupdate="CASCADE", ondelete="CASCADE"
         ),
-        ForeignKeyConstraint(
-            ["last_editor_user_id"],
-            ["users.user_id"],
-            onupdate="CASCADE",
-            ondelete="SET NULL",
-            use_alter=True,
-            name="fk_posts_users_last_editor_user_id",
+    )
+    user_id = Column(
+        INTEGER,
+        ForeignKey(
+            Users.user_id, name="fk_comments_users_user_id", use_alter=True, onupdate="CASCADE", ondelete="SET NULL"
         ),
-    ]
-
-    post_id: int = field(metadata={"name": "post_id", "type_": INTEGER()})
-    post_type_id: int = field(metadata={"name": "post_type_id", "type_": INTEGER()})
-    accepted_answer_id: int = field(metadata={"name": "accepted_answer_id", "type_": INTEGER()})
-    title: str = field(metadata={"name": "title", "type_": VARCHAR()})
-    body: str = field(metadata={"name": "body", "type_": VARCHAR()})
-    score: int = field(metadata={"name": "score", "type_": INTEGER()})
-    view_count: int = field(metadata={"name": "view_count", "type_": INTEGER()})
-    answer_count: int = field(metadata={"name": "answer_count", "type_": INTEGER()})
-    comment_count: int = field(metadata={"name": "comment_count", "type_": INTEGER()})
-    favorite_count: int = field(metadata={"name": "favorite_count", "type_": INTEGER()})
-    owner_user_id: int = field(metadata={"name": "owner_user_id", "type_": INTEGER()})
-    owner_display_name: str = field(metadata={"name": "owner_display_name", "type_": VARCHAR()})
-    last_editor_user_id: int = field(metadata={"name": "last_editor_user_id", "type_": INTEGER()})
-    last_editor_display_name: str = field(metadata={"name": "last_editor_display_name", "type_": VARCHAR()})
-    parent_id: int = field(metadata={"name": "parent_id", "type_": INTEGER()})
-    created_time: datetime = field(metadata={"name": "created_time", "type_": TIMESTAMP()})
-    last_activity_time: datetime = field(metadata={"name": "last_activity_time", "type_": TIMESTAMP()})
-    last_edited_time: datetime = field(metadata={"name": "last_edited_time", "type_": TIMESTAMP()})
-    community_owned_time: datetime = field(metadata={"name": "community_owned_time", "type_": TIMESTAMP()})
-    closed_time: datetime = field(metadata={"name": "closed_time", "type_": TIMESTAMP()})
+    )
+    user_display_name = Column(VARCHAR(255))
+    body = Column(VARCHAR(None))
+    score = Column(INTEGER, default=0)
+    created_time = Column(TIMESTAMP, server_default=func.now())
 
 
-@dataclass(frozen=True)
-class Tags(AlchemyTable):
-    table_name = "tags"
-    table_constraints = [
-        PrimaryKeyConstraint("tag_id", name="pk_tags"),
-        ForeignKeyConstraint(
-            ["excerpt_post_id"],
-            ["posts.post_id"],
-            onupdate="CASCADE",
-            ondelete="SET NULL",
-            use_alter=True,
-            name="fk_tags_posts_excerpt_post_id",
+class Tags(BaseStats):
+    """A metaclass for `tags` table."""
+
+    __tablename__ = "tags"
+
+    tag_id = Column(INTEGER, primary_key=True, autoincrement=False)
+    name = Column(VARCHAR(255), nullable=False)
+    usage_count = Column(INTEGER, default=0)
+    excerpt = Column(VARCHAR(None))
+    description = Column(VARCHAR(None))
+
+
+class PostsTags(BaseStats):
+    """A metaclass for `posts_tags` table."""
+
+    __tablename__ = "posts_tags"
+
+    post_id = Column(
+        INTEGER,
+        ForeignKey(Posts.post_id, name="fk_postsTags_posts_post_id", onupdate="CASCADE", ondelete="CASCADE"),
+        primary_key=True,
+        autoincrement=False,
+    )
+    tag_id = Column(
+        INTEGER,
+        ForeignKey(Tags.tag_id, name="fk_postsTags_tags_tag_id", onupdate="CASCADE", ondelete="CASCADE"),
+        primary_key=True,
+        autoincrement=False,
+    )
+
+
+class VoteTypes(BaseStats):
+    """A metaclass for `vote_types` table."""
+
+    __tablename__ = "vote_types"
+
+    vote_type_id = Column(INTEGER, primary_key=True, autoincrement=False)
+    name = Column(VARCHAR(255), nullable=False)
+    description = Column(VARCHAR(None))
+
+
+class Votes(BaseStats):
+    """A metaclass for `votes` table."""
+
+    __tablename__ = "votes"
+
+    vote_id = Column(INTEGER, primary_key=True, autoincrement=False)
+    user_id = Column(
+        INTEGER, ForeignKey(Users.user_id, name="fk_votes_users_user_id", onupdate="CASCADE", ondelete="CASCADE")
+    )
+    post_id = Column(
+        INTEGER, ForeignKey(Posts.post_id, name="fk_votes_posts_post_id", onupdate="CASCADE", ondelete="CASCADE")
+    )
+    vote_type_id = Column(
+        INTEGER,
+        ForeignKey(
+            VoteTypes.vote_type_id, name="fk_votes_voteTypes_vote_type_id", onupdate="CASCADE", ondelete="CASCADE"
         ),
-        ForeignKeyConstraint(
-            ["wiki_post_id"],
-            ["posts.post_id"],
-            onupdate="CASCADE",
-            ondelete="SET NULL",
-            use_alter=True,
-            name="fk_tags_posts_wiki_post_id",
-        ),
-    ]
-
-    tag_id: int = field(metadata={"name": "tag_id", "type_": INTEGER()})
-    tag_name: str = field(metadata={"name": "tag_name", "type_": VARCHAR()})
-    count: int = field(metadata={"name": "count", "type_": INTEGER()})
-    excerpt_post_id: int = field(metadata={"name": "excerpt_post_id", "type_": INTEGER()})
-    wiki_post_id: int = field(metadata={"name": "wiki_post_id", "type_": INTEGER()})
+    )
+    bounty_amount = Column(INTEGER)
+    created_time = Column(TIMESTAMP, server_default=func.now())
 
 
-@dataclass(frozen=True)
-class Users(AlchemyTable):
-    table_name = "users"
-    table_constraints = [
-        PrimaryKeyConstraint("user_id", name="pk_users"),
-    ]
+class PostLinkTypes(BaseStats):
+    """A metaclass for `post_link_types` table."""
 
-    user_id: int = field(metadata={"name": "user_id", "type_": INTEGER()})
-    account_id: int = field(metadata={"name": "account_id", "type_": INTEGER()})
-    display_name: str = field(metadata={"name": "display_name", "type_": VARCHAR()})
-    age: int = field(metadata={"name": "age", "type_": INTEGER()})
-    website_url: str = field(metadata={"name": "website_url", "type_": VARCHAR()})
-    profile_img_url: str = field(metadata={"name": "profile_img_url", "type_": VARCHAR()})
-    location: str = field(metadata={"name": "location", "type_": VARCHAR()})
-    about_me: str = field(metadata={"name": "about_me", "type_": VARCHAR()})
-    reputation: int = field(metadata={"name": "reputation", "type_": INTEGER()})
-    views: int = field(metadata={"name": "views", "type_": INTEGER()})
-    up_votes: int = field(metadata={"name": "up_votes", "type_": INTEGER()})
-    down_votes: int = field(metadata={"name": "down_votes", "type_": INTEGER()})
-    created_time: datetime = field(metadata={"name": "created_time", "type_": TIMESTAMP()})
-    last_accessed_time: datetime = field(metadata={"name": "last_accessed_time", "type_": TIMESTAMP()})
+    __tablename__ = "post_link_types"
+
+    link_type_id = Column(INTEGER, primary_key=True, autoincrement=False)
+    name = Column(VARCHAR(255), nullable=False)
+    description = Column(VARCHAR(None))
 
 
-@dataclass(frozen=True)
-class Votes(AlchemyTable):
-    table_name = "votes"
-    table_constraints = [
-        PrimaryKeyConstraint("vote_id", name="pk_votes"),
-        ForeignKeyConstraint(
-            ["post_id"],
-            ["posts.post_id"],
+class PostLinks(BaseStats):
+    """A metaclass for `post_links` table."""
+
+    __tablename__ = "post_links"
+
+    post_link_id = Column(INTEGER, primary_key=True, autoincrement=False)
+    post_link_type_id = Column(
+        INTEGER,
+        ForeignKey(
+            PostLinkTypes.link_type_id,
+            name="fk_postLinks_postLinkTypes_link_type_id",
             onupdate="CASCADE",
             ondelete="CASCADE",
-            use_alter=True,
-            name="fk_votes_posts_post_id",
         ),
-        ForeignKeyConstraint(
-            ["user_id"],
-            ["users.user_id"],
+    )
+    post_id = Column(
+        INTEGER, ForeignKey(Posts.post_id, name="fk_postLinks_posts_post_id", onupdate="CASCADE", ondelete="CASCADE")
+    )
+    related_post_id = Column(
+        INTEGER,
+        ForeignKey(Posts.post_id, name="fk_postLinks_post_related_post_id", onupdate="CASCADE", ondelete="CASCADE"),
+    )
+    created_time = Column(TIMESTAMP, server_default=func.now())
+
+
+class PostHistoryTypes(BaseStats):
+    """A metaclass for `post_history_types` table."""
+
+    __tablename__ = "post_history_types"
+
+    post_history_type_id = Column(INTEGER, primary_key=True, autoincrement=False)
+    name = Column(VARCHAR(255), nullable=False)
+    description = Column(VARCHAR(None))
+
+
+class PostHitories(BaseStats):
+    """A metaclass for `post_histories` table."""
+
+    __tablename__ = "post_histories"
+
+    post_history_id = Column(INTEGER, primary_key=True, autoincrement=False)
+    post_history_type_id = Column(
+        INTEGER,
+        ForeignKey(
+            PostHistoryTypes.post_history_type_id,
+            name="fk_postHistories_postHistoryTypes_post_history_type_id",
             onupdate="CASCADE",
             ondelete="CASCADE",
-            use_alter=True,
-            name="fk_votes_users_user_id",
         ),
-    ]
-
-    vote_id: int = field(metadata={"name": "vote_id", "type_": INTEGER()})
-    vote_type_id: int = field(metadata={"name": "vote_type_id", "type_": INTEGER()})
-    post_id: int = field(metadata={"name": "post_id", "type_": INTEGER()})
-    user_id: int = field(metadata={"name": "user_id", "type_": INTEGER()})
-    bounty_amount: int = field(metadata={"name": "bounty_amount", "type_": INTEGER()})
-    created_date: date = field(metadata={"name": "created_time", "type_": DATE()})
+    )
+    revision_guid = Column(VARCHAR(255), nullable=False)
+    user_id = Column(
+        INTEGER,
+        ForeignKey(Users.user_id, name="fk_postHistories_users_user_id", onupdate="CASCADE", ondelete="SET NULL"),
+    )
+    user_display_name = Column(VARCHAR(255))
+    post_id = Column(
+        INTEGER,
+        ForeignKey(Posts.post_id, name="fk_postHistories_posts_post_id", onupdate="CASCADE", ondelete="CASCADE"),
+    )
+    text = Column(VARCHAR(None))
+    comment = Column(VARCHAR(None))
+    created_time = Column(TIMESTAMP, server_default=func.now())

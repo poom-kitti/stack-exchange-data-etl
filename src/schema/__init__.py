@@ -1,42 +1,30 @@
-"""SQLAlchemy table schema definitions."""
+"""This module contains the initialization of SQLAlchemy ORM base classes."""
+from typing import List, Type
 
-import dataclasses
-from abc import ABC
-from typing import ClassVar, List, Mapping
-
-from pyspark.sql import DataFrame
-from sqlalchemy.schema import Column, Constraint, MetaData, SchemaItem, Table
+from sqlalchemy.orm import declarative_base
+from sqlalchemy.schema import MetaData, Table
 
 
-class AlchemyTable(ABC):
-    """A base class for all tables.
+class SABase:
+    """Base class for SQL Alchemy table that contains useful utility functions.
 
-    Table classes should be data classes and extend this base class.
-    Table classes itself represent the schema of a table.
+    Should never be directly inherited when creating new `Base` class for a
+    database. Import `Base` instead.
     """
 
-    table_name: ClassVar[str]
-    table_constraints: ClassVar[List[Constraint]] = []
-    table_config: ClassVar[Mapping] = {}
+    __tablename__: str
+    __table__: Table
+    metadata: MetaData
 
     @classmethod
-    def bind_to_metadata(cls, metadata: MetaData) -> Table:
-        """Bind the table to given metadata."""
-        columns = [Column(**field.metadata) for field in dataclasses.fields(cls)]
-
-        args: List[SchemaItem] = columns + cls.table_constraints  # type: ignore
-
-        return Table(cls.table_name, metadata, *args, **cls.table_config)
+    def get_column_names(cls) -> List[str]:
+        """Get the column names of this table."""
+        return cls.__table__.columns.keys()
 
     @classmethod
-    def column_names(cls) -> List[str]:
-        """The list of column names of this table"""
+    def get_table_name(cls) -> str:
+        """Get the table name of this table."""
+        return cls.__tablename__
 
-        return [field.metadata.get("name") for field in dataclasses.fields(cls)]
 
-    @classmethod
-    def select_from(cls, df: DataFrame) -> DataFrame:
-        """Select only the columns that related to the table from the given
-        dataframe `df`.
-        """
-        return df.select(*cls.column_names())
+Base: Type[SABase] = declarative_base(cls=SABase, name="Base")

@@ -1,16 +1,15 @@
 """A module containing connector class to connect with Postgres database
 through using sqlalchemy. The underlying driver used is psycopg2.
 """
+from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Dict, Mapping, Optional, Union, Sequence
+from typing import Iterator, Mapping, Sequence, Union
 
 import sqlalchemy as sa
-from sqlalchemy.engine import URL, CursorResult, Engine, Row
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.schema import MetaData, Table
-from sqlalchemy.sql.expression import ClauseElement
+from sqlalchemy.engine import URL, Engine
+from sqlalchemy.orm import Session
+from sqlalchemy.schema import MetaData
 
-from ..schema import AlchemyTable
 from . import logger as _logger
 
 logger = _logger.get_default_logger(__name__)
@@ -18,6 +17,8 @@ logger = _logger.get_default_logger(__name__)
 
 @dataclass
 class SQLAlchemyConnectionConfig:
+    """A configuration class for making connection to database using SQLAlchemy."""
+
     db_type: str  # postgres / mssql
     hostname: str
     port: int
@@ -28,12 +29,14 @@ class SQLAlchemyConnectionConfig:
 
     @classmethod
     def create_mssql_config(cls, hostname: str, username: str, password: str, db_name: str, port: int = 1433):
+        """Create SQLAlchemy configuration to connect with MS SQL (SQL Server)."""
         db_type = "mssql"
         query = {"driver": "ODBC Driver 17 for SQL Server"}
         return cls(db_type, hostname, port, username, password, db_name, query)
 
     @classmethod
     def create_postgres_config(cls, hostname: str, username: str, password: str, db_name: str, port: int = 5432):
+        """Create SQLAlchemy configuration to connect with Postgres."""
         db_type = "postgres"
         return cls(db_type, hostname, port, username, password, db_name)
 
@@ -64,92 +67,49 @@ def connect_to_db(connection_config: SQLAlchemyConnectionConfig) -> Engine:
 
     return sa.create_engine(connection_url)
 
+
 class SQLAlchemyConnector:
     """A class using sqlalchemy to connect to Postgres or MS SQL database. Provide
     logging and methods to execute SQL statements.
+
+    Attributes:
+        engine: The SQLAlchemy engine that connects to the database.
+        metadata: The metadata holding information on the tables.
     """
 
-    def __init__(self, connection_config: SQLAlchemyConnectionConfig):
+    def __init__(self, connection_config: SQLAlchemyConnectionConfig, metadata: MetaData):
         self.engine = connect_to_db(connection_config)
-        self.metadata = MetaData(bind=self.engine)
+        self.metadata = metadata
 
-    def close(self):
-        """Close the engine connection with the postgres database."""
-        logger.info("Closing engine connection to postgres.")
+    def create_all_tables(self) -> None:
+        """Create all tables defined in the metadata in the database.
+
+        If any table is already presented in the database, skip creating that
+        table.
+        """
+        logger.info("Creating in database according to metadata.")
+        self.metadata.create_all(self.engine)
+
+    def drop_all_tables(self) -> None:
+        """Drop all tables defined in the metadata in the database.
+
+        If any table is not presented in the database, skip dropping that
+        table.
+        """
+        logger.info("Dropping tables in database according to metadata.")
+        self.metadata.drop_all(self.engine)
+
+    def close(self) -> None:
+        """Close the engine connection with the database."""
+        logger.info("Closing engine connection to database.")
 
         self.engine.dispose()
 
-    def add_table_schema(self, table: AlchemyTable) -> Table:
-        """Add the table schema to the class metadata.
-
-        Args:
-            table_name: The name of the table.
-
-            *cols: The column
-        """
-        return table.bind_to_metadata(self.metadata)
-
-    def get_table_schema_from_db(self, table_name: str, extend_existing: bool = True) -> Table:
-        """Get the schema of an existing table from the database and add it to the class metadata.
-
-        Args:
-            table_name: The name of the table in the database to get the schema of.
-
-            extend_existing: A flag to indicate whether to extend (add additional arguments)
-                the table schema if it already existed in the metadata. If set to True,
-                newly retrieved schema from database may potentially overwrite existing columns
-                and options of the table in metadata.
-
-        Raises:
-            SQLAlchemyError: If unable to get the table schema.
-        """
-        logger.info("Getting schema of table (%s).", table_name)
-
-        try:
-            return sa.Table(table_name, self.metadata, autoload_with=self.engine, extend_existing=extend_existing)
-        except SQLAlchemyError as error:
-            logger.exception("Unable to get schema of table (%s).", table_name)
-            raise error
-
-    def get_table(self, table_name: str) -> Table:
-        """Get the table from the class metadata.
-
-        Raises:
-            ValueError: If the `table_name` does not exists the class metadata.
-        """
-        tables: Dict[str, Table] = self.metadata.tables
-
-        if table_name not in tables:
-            logger.error("Table name (%s) does not exists in the metadata.", self.metadata)
-            raise ValueError(f"`table_name` ({table_name}) does not exist in metadata.")
-
-        return tables[table_name]
-
-    def create_tables(self) -> None:
-        """Create all the tables present in the class metadata. If any table already exists in the database,
-        then the creation of that table will be skipped.
-        """
-        self.metadata.create_all(self.engine, checkfirst=True)
-
-    def execute_one(self, sql_stmt: ClauseElement):
-        """Execute a single sql statement as transaction."""
-        logger.info("Executing a single SQL statement as transaction.")
-        try:
-            # Running as a transaction
-            with self.engine.begin() as conn:
-                conn.execute(sql_stmt)
-        except SQLAlchemyError as error:
-            logger.exception("Unable to execute the SQL statement.")
-            raise error
-
-    def fetch_one(self, sql_stmt: ClauseElement) -> Optional[Row]:
-        """Fetch a single row from the result of the SQL statement."""
-        logger.info("Fetching a single row from result of SQL statement.")
-        try:
-            # Running as a transaction
-            with self.engine.begin() as conn:
-                res: CursorResult = conn.execute(sql_stmt)
-                return res.first()
-        except SQLAlchemyError as error:
-            logger.exception("Unable to execute the SQL statement.")
-            raise error
+    @contextmanager
+    def session(self) -> Iterator[Session]:
+        """Get the session to interact with the database."""
+        with Session(self.engine) as session, session.begin():
+            try:
+                yield session
+            finally:
+                session.commit()
