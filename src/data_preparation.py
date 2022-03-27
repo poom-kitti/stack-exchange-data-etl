@@ -1,6 +1,5 @@
 import os
 
-from dotenv import find_dotenv, load_dotenv
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
 
@@ -14,8 +13,6 @@ from .utils import logger as _logger
 from .utils.pyspark_utils import JDBCConnectionConfig
 from .utils.sqlalchemy_connector import (SQLAlchemyConnectionConfig,
                                          SQLAlchemyConnector)
-
-load_dotenv(find_dotenv())
 
 # Initiate logger
 logger = _logger.get_default_logger(__name__)
