@@ -1,5 +1,4 @@
 # Custom ignores
-jdbc_driver/
 *playground.py
 
 # https://raw.githubusercontent.com/github/gitignore/master/Python.gitignore
