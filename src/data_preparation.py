@@ -1,3 +1,5 @@
+"""This module is an application that extract `stats` data from Postgres database,
+perform transformations, and load the data into MS SQL (SQL Server) database."""
 import os
 
 from pyspark import SparkConf

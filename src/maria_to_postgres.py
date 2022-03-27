@@ -1,3 +1,6 @@
+"""This module is an application that copy `stats` data from https://relational.fit.cvut.cz/dataset/Stats
+to Postgres database.
+"""
 import os
 
 from pyspark import SparkConf
