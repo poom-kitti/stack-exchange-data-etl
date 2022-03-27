@@ -87,7 +87,7 @@ class SQLAlchemyConnector:
         If any table is already presented in the database, skip creating that
         table.
         """
-        logger.info("Creating in database according to metadata.")
+        logger.info("Creating tables in database according to metadata.")
         self.metadata.create_all(self.engine)
 
     def drop_all_tables(self) -> None:

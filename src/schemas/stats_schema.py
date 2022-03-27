@@ -1,4 +1,6 @@
-from sqlalchemy import INTEGER, TIMESTAMP, VARCHAR, Column, ForeignKey
+"""This module contains the SQLAlchemy schema of the wanted tables in the destination
+database."""
+from sqlalchemy import BOOLEAN, INTEGER, TIMESTAMP, VARCHAR, Column, ForeignKey
 from sqlalchemy.schema import MetaData
 from sqlalchemy.sql import functions as func
 
@@ -7,7 +9,7 @@ from . import Base
 
 # Declarative base class
 class BaseStats(Base):
-    """A base class for tables in `stats` database."""
+    """A base class for wanted tables in `stats` destination database."""
 
     __abstract__ = True
     metadata = MetaData()
@@ -28,10 +30,10 @@ class Users(BaseStats):
     profile_image_url = Column(VARCHAR(255))
     reputation = Column(INTEGER, default=0)
     views = Column(INTEGER, default=0)
-    up_votes = Column(INTEGER, default=0)
-    down_votes = Column(INTEGER, default=0)
-    created_time = Column(TIMESTAMP, server_default=func.now())
-    last_accessed_time = Column(TIMESTAMP)
+    upvotes = Column(INTEGER, default=0)
+    downvotes = Column(INTEGER, default=0)
+    created_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    last_accessed_time = Column(TIMESTAMP(timezone=True))
 
 
 class Badges(BaseStats):
@@ -48,19 +50,18 @@ class UsersBadges(BaseStats):
 
     __tablename__ = "users_badges"
 
+    badge_granted_id = Column(INTEGER, primary_key=True, autoincrement=False)
     user_id = Column(
         INTEGER,
         ForeignKey(Users.user_id, name="fk_usersBadges_users_user_id", onupdate="CASCADE", ondelete="CASCADE"),
-        primary_key=True,
-        autoincrement=False,
+        nullable=False,
     )
     badge_id = Column(
         INTEGER,
         ForeignKey(Badges.badge_id, name="fk_usersBadges_badges_badge_id", onupdate="CASCADE", ondelete="CASCADE"),
-        primary_key=True,
-        autoincrement=False,
+        nullable=False,
     )
-    granted_time = Column(TIMESTAMP, server_default=func.now())
+    granted_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
 
 class PostTypes(BaseStats):
@@ -90,16 +91,6 @@ class Posts(BaseStats):
         ),
         nullable=False,
     )
-    accepted_answer_id = Column(
-        INTEGER,
-        ForeignKey(
-            "posts.post_id",
-            name="fk_posts_posts_accepted_answer_id",
-            use_alter=True,
-            onupdate="CASCADE",
-            ondelete="SET NULL",
-        ),
-    )
     owner_user_id = Column(
         INTEGER,
         ForeignKey(
@@ -125,11 +116,11 @@ class Posts(BaseStats):
         ),
     )
     last_editor_display_name = Column(VARCHAR(255))
-    created_time = Column(TIMESTAMP, server_default=func.now())
-    last_activity_time = Column(TIMESTAMP, onupdate=func.now())
-    last_edited_time = Column(TIMESTAMP)
-    community_owned_time = Column(TIMESTAMP)
-    closed_time = Column(TIMESTAMP)
+    created_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    last_activity_time = Column(TIMESTAMP(timezone=True), onupdate=func.now())
+    last_edited_time = Column(TIMESTAMP(timezone=True))
+    community_owned_time = Column(TIMESTAMP(timezone=True))
+    closed_time = Column(TIMESTAMP(timezone=True))
 
 
 class PostsAnswers(BaseStats):
@@ -149,7 +140,8 @@ class PostsAnswers(BaseStats):
         primary_key=True,
         autoincrement=False,
     )
-    answered_time = Column(TIMESTAMP, server_default=func.now())
+    is_accepted_answer = Column(BOOLEAN, default=False)
+    answered_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
 
 class Comments(BaseStats):
@@ -173,7 +165,7 @@ class Comments(BaseStats):
     user_display_name = Column(VARCHAR(255))
     body = Column(VARCHAR(None))
     score = Column(INTEGER, default=0)
-    created_time = Column(TIMESTAMP, server_default=func.now())
+    created_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
 
 class Tags(BaseStats):
@@ -205,6 +197,7 @@ class PostsTags(BaseStats):
         primary_key=True,
         autoincrement=False,
     )
+    tagged_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
 
 class VoteTypes(BaseStats):
@@ -236,7 +229,7 @@ class Votes(BaseStats):
         ),
     )
     bounty_amount = Column(INTEGER)
-    created_time = Column(TIMESTAMP, server_default=func.now())
+    created_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
 
 class PostLinkTypes(BaseStats):
@@ -255,7 +248,7 @@ class PostLinks(BaseStats):
     __tablename__ = "post_links"
 
     post_link_id = Column(INTEGER, primary_key=True, autoincrement=False)
-    post_link_type_id = Column(
+    link_type_id = Column(
         INTEGER,
         ForeignKey(
             PostLinkTypes.link_type_id,
@@ -271,7 +264,7 @@ class PostLinks(BaseStats):
         INTEGER,
         ForeignKey(Posts.post_id, name="fk_postLinks_post_related_post_id", onupdate="CASCADE", ondelete="CASCADE"),
     )
-    created_time = Column(TIMESTAMP, server_default=func.now())
+    created_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
 
 class PostHistoryTypes(BaseStats):
@@ -311,4 +304,4 @@ class PostHitories(BaseStats):
     )
     text = Column(VARCHAR(None))
     comment = Column(VARCHAR(None))
-    created_time = Column(TIMESTAMP, server_default=func.now())
+    created_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
