@@ -3,7 +3,7 @@ format:
 	poetry run isort src
 
 lint:
-	poetry run pylint src
+	poetry run pylint --disable=duplicate-code src
 
 mypy:
 	poetry run mypy src

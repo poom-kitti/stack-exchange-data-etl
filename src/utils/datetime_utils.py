@@ -14,6 +14,6 @@ def seconds_from_utc(timezone: str) -> int:
     """
     now = datetime.now(tz=None)
     pytz_timezone = pytz.timezone(timezone)
-    time_delta_from_utc = pytz.UTC.localize(now).astimezone(pytz_timezone) - pytz_timezone.localize(now)
+    time_delta_from_utc = pytz.utc.localize(now).astimezone(pytz_timezone) - pytz_timezone.localize(now)
 
     return int(time_delta_from_utc.total_seconds())
