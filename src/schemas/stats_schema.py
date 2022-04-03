@@ -1,6 +1,7 @@
 """This module contains the SQLAlchemy schema of the wanted tables in the destination
 database."""
-from sqlalchemy import BOOLEAN, INTEGER, TIMESTAMP, VARCHAR, Column, ForeignKey
+from sqlalchemy import BOOLEAN, INTEGER, VARCHAR, Column, ForeignKey
+from sqlalchemy.dialects.mssql import DATETIMEOFFSET
 from sqlalchemy.schema import MetaData
 from sqlalchemy.sql import functions as func
 
@@ -32,8 +33,8 @@ class Users(BaseStats):
     views = Column(INTEGER, default=0)
     upvotes = Column(INTEGER, default=0)
     downvotes = Column(INTEGER, default=0)
-    created_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
-    last_accessed_time = Column(TIMESTAMP(timezone=True))
+    created_time = Column(DATETIMEOFFSET, server_default=func.now())
+    last_accessed_time = Column(DATETIMEOFFSET)
 
 
 class Badges(BaseStats):
@@ -61,7 +62,7 @@ class UsersBadges(BaseStats):
         ForeignKey(Badges.badge_id, name="fk_usersBadges_badges_badge_id", onupdate="CASCADE", ondelete="CASCADE"),
         nullable=False,
     )
-    granted_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    granted_time = Column(DATETIMEOFFSET, server_default=func.now())
 
 
 class PostTypes(BaseStats):
@@ -116,11 +117,11 @@ class Posts(BaseStats):
         ),
     )
     last_editor_display_name = Column(VARCHAR(255))
-    created_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
-    last_activity_time = Column(TIMESTAMP(timezone=True), onupdate=func.now())
-    last_edited_time = Column(TIMESTAMP(timezone=True))
-    community_owned_time = Column(TIMESTAMP(timezone=True))
-    closed_time = Column(TIMESTAMP(timezone=True))
+    created_time = Column(DATETIMEOFFSET, server_default=func.now())
+    last_activity_time = Column(DATETIMEOFFSET, onupdate=func.now())
+    last_edited_time = Column(DATETIMEOFFSET)
+    community_owned_time = Column(DATETIMEOFFSET)
+    closed_time = Column(DATETIMEOFFSET)
 
 
 class PostsAnswers(BaseStats):
@@ -141,7 +142,7 @@ class PostsAnswers(BaseStats):
         autoincrement=False,
     )
     is_accepted_answer = Column(BOOLEAN, default=False)
-    answered_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    answered_time = Column(DATETIMEOFFSET, server_default=func.now())
 
 
 class Comments(BaseStats):
@@ -165,7 +166,7 @@ class Comments(BaseStats):
     user_display_name = Column(VARCHAR(255))
     body = Column(VARCHAR(None))
     score = Column(INTEGER, default=0)
-    created_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    created_time = Column(DATETIMEOFFSET, server_default=func.now())
 
 
 class Tags(BaseStats):
@@ -197,7 +198,7 @@ class PostsTags(BaseStats):
         primary_key=True,
         autoincrement=False,
     )
-    tagged_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    tagged_time = Column(DATETIMEOFFSET, server_default=func.now())
 
 
 class VoteTypes(BaseStats):
@@ -229,7 +230,7 @@ class Votes(BaseStats):
         ),
     )
     bounty_amount = Column(INTEGER)
-    created_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    created_time = Column(DATETIMEOFFSET, server_default=func.now())
 
 
 class PostLinkTypes(BaseStats):
@@ -264,7 +265,7 @@ class PostLinks(BaseStats):
         INTEGER,
         ForeignKey(Posts.post_id, name="fk_postLinks_post_related_post_id", onupdate="CASCADE", ondelete="CASCADE"),
     )
-    created_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    created_time = Column(DATETIMEOFFSET, server_default=func.now())
 
 
 class PostHistoryTypes(BaseStats):
@@ -304,4 +305,4 @@ class PostHitories(BaseStats):
     )
     text = Column(VARCHAR(None))
     comment = Column(VARCHAR(None))
-    created_time = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    created_time = Column(DATETIMEOFFSET, server_default=func.now())
