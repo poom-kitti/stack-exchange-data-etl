@@ -10,11 +10,13 @@ mainly used are **SQLAlchemy ORM** for table creations, and **PySpark** for ETL 
 ## Data Movement
 The original `stats` database is residing in a **MariaDB** database, which when connected is relatively slow to query, making data exploration relatively
 troublesome. Consequently, the data is first replicated to a local **Postgres** database. As for the final destination, the cleaned and prepared data will land 
-in a database residing in **Azure SQL Server**.
+in a database residing in **Azure SQL Server**. In addition, another database will be created in **Azure SQL Server** to be used as the location for data
+warehouse.
 
 The mentioned tasks are done by the following modules:
   - `src/maria_to_postgres.py` = Replicate data from **MariaDB** to **Postgres**.
   - `src/data_preparation.py` = Perform transformation on the data before loading them to **Azure SQL Server**.
+  - `src/warehouse_creation` = Create tables in the data warehouse residing in **Azure SQL Server**.
 
 ## Changes Made to Source Database
 The following changes are made to the source database before loading to the final database:
@@ -50,6 +52,7 @@ This project expects the following environment variables to be present in the ma
   - `MSSQL_USER` = \<user to connect to Azure SQL Server\>
   - `MSSQL_PASSWORD` = \<password to authenticate the user to connect to Azure SQL Server\>
   - `MSSQL_DATABASE` = \<database to load the data to in Azure SQL Server\>
+  - `MSSQL_WAREHOUSE_DATABASE` = \<database to create the warehouse tables in Azure SQL Server\>
  
  If you do not wish to change your system environment variables, you can create a `.env` file at the root of repository and use 
  [`python-dotenv`](https://github.com/theskumar/python-dotenv) to load the environment variables.
@@ -57,3 +60,4 @@ This project expects the following environment variables to be present in the ma
  ## Running the Application
  - Run the application to replicate data from **MariaDB** to **Postgres** using command `make replicate_data` in terminal
  - Run the application to transform and load data from **Postgres** to **Azure SQL Server** using command `make load_data` in terminal
+ - Run the application to create tables in the data warehouse that is hosted on **Azure SQL Server** using command `make create_warehouse_tables` in terminal
