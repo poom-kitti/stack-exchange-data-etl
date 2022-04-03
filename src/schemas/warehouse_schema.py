@@ -31,7 +31,7 @@ class DateDim(BaseWarehouse):
     day = Column(INTEGER, nullable=False)
     month = Column(INTEGER, nullable=False)
     year = Column(INTEGER, nullable=False)
-    quater = Column(INTEGER, nullable=False)
+    quater = Column(VARCHAR(2), nullable=False)
     day_of_week = Column(VARCHAR(20), nullable=False)
     month_name = Column(VARCHAR(20), nullable=False)
     is_weekend = Column(VARCHAR(10), nullable=False)
@@ -212,16 +212,6 @@ class UserActivitiesFact(BaseWarehouse):
         ),
         primary_key=True,
     )
-    user_activity_type_key = Column(
-        INTEGER,
-        ForeignKey(
-            UserActivityTypeDim.user_activity_type_key,
-            name="fk_userActivitiesFact_userActivityTypeDim_user_activity_type_key",
-            onupdate="CASCADE",
-            ondelete="NO ACTION",
-        ),
-        primary_key=True,
-    )
     user_demographic_key = Column(
         INTEGER,
         ForeignKey(
@@ -232,8 +222,18 @@ class UserActivitiesFact(BaseWarehouse):
         ),
         nullable=False,
     )
-    activity_date_key = Column(
+    user_activity_type_key = Column(
         INTEGER,
+        ForeignKey(
+            UserActivityTypeDim.user_activity_type_key,
+            name="fk_userActivitiesFact_userActivityTypeDim_user_activity_type_key",
+            onupdate="CASCADE",
+            ondelete="NO ACTION",
+        ),
+        primary_key=True,
+    )
+    activity_date_key = Column(
+        VARCHAR(8),
         ForeignKey(
             DateDim.date_key,
             name="fk_userActivitiesFact_dateDim_activity_date_key",
@@ -335,7 +335,7 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
     )
     question_post_id = Column(INTEGER, nullable=False)
     created_date_key = Column(
-        INTEGER,
+        VARCHAR(8),
         ForeignKey(
             DateDim.date_key,
             name="fk_questionPostLifeCycleFact_dateDim_created_date_key",
@@ -355,7 +355,7 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
         nullable=False,
     )
     first_activity_date_key = Column(
-        INTEGER,
+        VARCHAR(8),
         ForeignKey(
             DateDim.date_key,
             name="fk_questionPostLifeCycleFact_dateDim_first_activity_date_key",
@@ -373,7 +373,7 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
         ),
     )
     latest_activity_date_key = Column(
-        INTEGER,
+        VARCHAR(8),
         ForeignKey(
             DateDim.date_key,
             name="fk_questionPostLifeCycleFact_dateDim_latest_activity_date_key",
@@ -391,7 +391,7 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
         ),
     )
     first_answer_date_key = Column(
-        INTEGER,
+        VARCHAR(8),
         ForeignKey(
             DateDim.date_key,
             name="fk_questionPostLifeCycleFact_dateDim_first_answer_date_key",
@@ -409,7 +409,7 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
         ),
     )
     accepted_answer_date_key = Column(
-        INTEGER,
+        VARCHAR(8),
         ForeignKey(
             DateDim.date_key,
             name="fk_questionPostLifeCycleFact_dateDim_accepted_answer_date_key",
@@ -427,7 +427,7 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
         ),
     )
     community_owned_date_key = Column(
-        INTEGER,
+        VARCHAR(8),
         ForeignKey(
             DateDim.date_key,
             name="fk_questionPostLifeCycleFact_dateDim_community_owned_date_key",
@@ -445,7 +445,7 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
         ),
     )
     closed_date_key = Column(
-        INTEGER,
+        VARCHAR(8),
         ForeignKey(
             DateDim.date_key,
             name="fk_questionPostLifeCycleFact_dateDim_closed_date_key",
