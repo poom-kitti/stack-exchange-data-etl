@@ -1,4 +1,4 @@
-# Stack Overflow Data ETL
+# Stack Exchange Data ETL
 ## Purpose of this Project
 An anonymized dump of some of Stats Stack Exchange network for the year 2009-2014 is available at https://relational.fit.cvut.cz/dataset/Stats 
 within the database call `stats`. However, the database is not as cleaned and prepared as desired; therefore, this project is created to provide
