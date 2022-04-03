@@ -17,3 +17,6 @@ replicate_data:
 
 load_data:
 	poetry run python -m src.data_preparation
+
+create_warehouse_tables:
+	poetry run python -m src.warehouse_creation
