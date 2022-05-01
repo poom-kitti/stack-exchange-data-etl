@@ -25,6 +25,7 @@ The following changes are made to the source database before loading to the fina
   - Add tables to show the description of the different entity types, for example `post_types`.
   - Make the relationship between certain tables clearer, for example adding `posts_tags` table to show relationship between `posts` and `tags` tables.
   - Add timezone to the datetime types (this project assumes the souce database has the time saved as UTC time).
+  - Fill any NULL values for certain numerical measures to 0.
 
 The following diagrams show the difference between the original schema and final schema:
 
@@ -33,6 +34,26 @@ The following diagrams show the difference between the original schema and final
 
 ### Final `stats` Schema
 ![Final `stats` schema](/assets/stats_schema.png)
+
+## Datawarehouse Design
+After data is loaded into the database in **Azure Server**, SSIS will later be used to transform the data further 
+and load them to the dimension and fact tables. However, before SSIS can run, those tables must be first created.
+
+In this project, the final expected result is to create two fact tables:
+  1. A fact table to record the user activities where a user activity refers to posting (question or answer posts), 
+  voting (upvote and downvote), favorite a post, or putting a bounty on the post. In addition, a monthly aggregated 
+  fact table will be created from this base fact table.
+  2. A fact table to track the differents states of a question post, such as being answered, accepting an answer,
+  or being closed.
+
+### `User Activities Fact` Schema
+![`User Activities Fact` schema](/assets/user_activities_fact.png)
+
+### `Monthly Activities Fact` Schema
+![`Monthly Activities Fact` schema](/assets/monthly_user_activities_fact.png)
+
+### `Question Post Life Cycle Fact` Schema
+![`Question Post Life Cycle Fact` schema](/assets/question_post_life_cycle_fact.png)
 
 ## Installation
 This project requires [***poetry***](https://python-poetry.org/) and [***Python 3.8.x***](https://www.python.org/) installed in the machine.
