@@ -5,11 +5,10 @@ import os
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
 
-from .schemas.stats_schema import (Badges, BaseStats, Comments,
-                                   PostHistoryTypes, PostHitories, PostLinks,
-                                   PostLinkTypes, Posts, PostsAnswers,
-                                   PostsTags, PostTypes, Tags, Users,
-                                   UsersBadges, Votes, VoteTypes)
+from .schemas.stats_schema import (Badges, BaseStats, Comments, PostHistories,
+                                   PostHistoryTypes, PostLinks, PostLinkTypes,
+                                   Posts, PostsAnswers, PostsTags, PostTypes,
+                                   Tags, Users, UsersBadges, Votes, VoteTypes)
 from .transformations import stats_transformation as transformation
 from .utils import logger as _logger
 from .utils.pyspark_utils import JDBCConnectionConfig
@@ -112,7 +111,7 @@ def main() -> None:
     log_loading_table(PostHistoryTypes.get_table_name())
     transformation.load_post_history_types_table(spark, destination_db_config)
 
-    log_loading_table(PostHitories.get_table_name())
+    log_loading_table(PostHistories.get_table_name())
     transformation.load_post_histories_table(spark, source_db_config, destination_db_config)
 
 
