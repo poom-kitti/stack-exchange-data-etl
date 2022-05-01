@@ -2,8 +2,8 @@ from pyspark.sql import Row, SparkSession, Window
 from pyspark.sql import functions as F
 
 from ..schemas import stats_pyspark_schema as schema
-from ..schemas.stats_schema import (Badges, Comments, PostHistoryTypes,
-                                    PostHitories, PostLinks, PostLinkTypes,
+from ..schemas.stats_schema import (Badges, Comments, PostHistories,
+                                    PostHistoryTypes, PostLinks, PostLinkTypes,
                                     Posts, PostsAnswers, PostsTags, PostTypes,
                                     Tags, Users, UsersBadges, Votes, VoteTypes)
 from ..utils import pyspark_utils
@@ -18,12 +18,14 @@ def load_users_table(
     Transformations:
         - Change datetime type (timezone unaware) for `CreationDate` and `LastAccessDate` columns to
             timestamp (timezone aware).
+        - Fill any missing values for integer measure columns with 0
     """
     # Read
     ori_df = pyspark_utils.read_db_table(spark, source_db_config, Users.get_table_name(), {"fetchsize": "10000"})
 
     # Transform
     users_df = pyspark_utils.from_datetime_to_timestamp(ori_df, "CreationDate", "LastAccessDate")
+    users_df = users_df.fillna(0, ["Reputation", "Views", "UpVotes", "DownVotes"])
 
     # Select
     users_df = pyspark_utils.rename_columns(users_df, schema.users_rename_columns_mapping)
@@ -116,6 +118,7 @@ def load_posts_table(
         - Only select rows that are questions or anwers
         - Change `CreaionDate`, `LasActivityDate`, `LastEditDate`, `CommunityOwnedDate` and `ClosedDate` columns
             from datetime (timezone unaware) to timestamp (timezone aware).
+        - Fill any missing values for integer measure columns with 0
     """
     # Read
     ori_df = pyspark_utils.read_db_table(spark, source_db_config, "posts", {"fetchsize": "10000"})
@@ -125,6 +128,7 @@ def load_posts_table(
     posts_df = pyspark_utils.from_datetime_to_timestamp(
         posts_df, "CreaionDate", "LasActivityDate", "LastEditDate", "CommunityOwnedDate", "ClosedDate"
     )
+    posts_df = posts_df.fillna(0, ["Score", "ViewCount", "AnswerCount", "CommentCount", "FavoriteCount"])
 
     # Select
     posts_df = pyspark_utils.rename_columns(posts_df, schema.posts_rename_columns_mapping)
@@ -158,7 +162,9 @@ def load_posts_answers_table(
     posts_answers_df = posts_answers_df.join(
         accpeted_answers_df, on=posts_answers_df["Id"] == accpeted_answers_df["AcceptedAnswerId"], how="left"
     )
-    posts_answers_df = posts_answers_df.withColumn("is_accepted_answer", F.col("AcceptedAnswerId").isNotNull())
+    posts_answers_df = posts_answers_df.withColumn(
+        "is_accepted_answer", F.when(F.col("AcceptedAnswerId").isNotNull(), "YES").otherwise("NO")
+    )
 
     # Select
     posts_answers_df = pyspark_utils.rename_columns(posts_answers_df, schema.posts_answers_columns_mapping)
@@ -180,6 +186,7 @@ def load_comments_table(
     Transformations:
         - Remove any comments that are not related to question or answer posts.
         - Change `CreationDate` column from datetime (timezone unaware) to timestamp (timezone aware).
+        - Fill any missing values for integer measure columns with 0
     """
     # Read
     ori_df = pyspark_utils.read_db_table(spark, source_db_config, "comments", additional_options={"fetchsize": "10000"})
@@ -191,6 +198,7 @@ def load_comments_table(
     # Remove rows that refer to non-existing posts
     comments_df = ori_df.join(posts_df, on=ori_df["PostId"] == posts_df[Posts.post_id.name], how="semi")
     comments_df = pyspark_utils.from_datetime_to_timestamp(comments_df, "CreationDate")
+    comments_df = comments_df.fillna(0, "Score")
 
     # Select
     comments_df = pyspark_utils.rename_columns(comments_df, schema.comments_columns_mapping)
@@ -211,6 +219,7 @@ def load_tags_table(
     Transformations:
         - Get the tag's excerpt from the `posts` table (excerpt post) in source database.
         - Get the tag's description from the `posts` table (wiki post) in source database.
+        - Fill any missing values for integer measure columns with 0
     """
     # Read
     ori_tags_df = pyspark_utils.read_db_table(spark, source_db_config, "tags").alias("tags")
@@ -225,6 +234,7 @@ def load_tags_table(
         .join(ori_posts_df.alias("wiki"), on=ori_tags_df["WikiPostId"] == ori_posts_df["Id"], how="left")
         .select("tags.*", F.col("wiki.body").alias(Tags.description.name))
     )
+    tags_df = tags_df.fillna(0, "Count")
 
     # Select
     tags_df = pyspark_utils.rename_columns(tags_df, schema.tags_columns_mapping)
@@ -321,7 +331,7 @@ def load_votes_table(
     Transformations:
         - Remove posts that are not question or answer posts.
         - Remove unwanted `VoteTypeId`.
-        - Change `CreationDate` column from datetime (timezone unaware) to timestamp (timezone aware).
+        - Change `CreationDate` column from date to timestamp (timezone aware).
     """
     # Read
     ori_df = pyspark_utils.read_db_table(spark, source_db_config, "votes", {"fetchsize": "10000"})
@@ -518,6 +528,6 @@ def load_post_histories_table(
     pyspark_utils.write_df_to_db_table(
         post_histories_df,
         destination_db_config,
-        PostHitories.get_table_name(),
+        PostHistories.get_table_name(),
         additional_options={"batchsize": "10000"},
     )
