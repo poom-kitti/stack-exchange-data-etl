@@ -5,7 +5,6 @@ from typing import Dict, Optional
 import tzlocal
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql.types import TimestampType
 
 from . import datetime_utils as dt_utils
 from . import logger as _logger
@@ -57,7 +56,7 @@ class JDBCConnectionConfig:
         )
 
     @classmethod
-    def create_mssql_config(cls, hostname: str, user: str, password: str, db_name: str, port: str = "5432"):
+    def create_mssql_config(cls, hostname: str, user: str, password: str, db_name: str, port: str = "1433"):
         """Create JDBC configuration to connect with MS SQL database."""
         return cls(
             db_type="sqlserver",
@@ -103,7 +102,7 @@ def from_datetime_to_timestamp(df: DataFrame, *cols: str) -> DataFrame:
     seconds_from_utc = dt_utils.seconds_from_utc(tzlocal.get_localzone_name())
 
     for col in cols:
-        df = df.withColumn(col, (F.unix_timestamp(col) + seconds_from_utc).cast(TimestampType()))
+        df = df.withColumn(col, F.to_timestamp((F.unix_timestamp(col) + seconds_from_utc)))
 
     return df
 
@@ -130,7 +129,11 @@ def read_db_table(
     """
     logger.info("Reading dataframe from table (%s) in database.", table_name)
 
-    jdbc_uri = f"jdbc:{jdbc_config.db_type.lower()}://{jdbc_config.hostname}:{jdbc_config.port}/{jdbc_config.db_name}"
+    jdbc_uri = (
+        f"jdbc:{jdbc_config.db_type}://{jdbc_config.hostname}:{jdbc_config.port};database={jdbc_config.db_name};"
+        if jdbc_config.db_type == "sqlserver"
+        else f"jdbc:{jdbc_config.db_type}://{jdbc_config.hostname}:{jdbc_config.port}/{jdbc_config.db_name}"
+    )
 
     read_properties = {
         "user": jdbc_config.user,
@@ -173,7 +176,11 @@ def write_df_to_db_table(
     """
     logger.info("Writing dataframe to table (%s) in database.", table_name)
 
-    jdbc_uri = f"jdbc:{jdbc_config.db_type}://{jdbc_config.hostname}:{jdbc_config.port}/{jdbc_config.db_name}"
+    jdbc_uri = (
+        f"jdbc:{jdbc_config.db_type}://{jdbc_config.hostname}:{jdbc_config.port};databaseName={jdbc_config.db_name};"
+        if jdbc_config.db_type == "sqlserver"
+        else f"jdbc:{jdbc_config.db_type}://{jdbc_config.hostname}:{jdbc_config.port}/{jdbc_config.db_name}"
+    )
 
     write_properties = {
         "user": jdbc_config.user,
