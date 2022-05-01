@@ -2,7 +2,8 @@
 # Disable class names that are too long to conform with naming classes after table names
 """This module contains the SQLAlchemy schema of the wanted tables in the warehouse
 database."""
-from sqlalchemy import DATE, INTEGER, TIME, VARCHAR, Column, ForeignKey
+from sqlalchemy import (DATE, INTEGER, NVARCHAR, TIME, VARCHAR, Column,
+                        ForeignKey)
 from sqlalchemy.schema import MetaData
 
 from . import Base
@@ -26,7 +27,7 @@ class DateDim(BaseWarehouse):
 
     __tablename__ = "date_dim"
 
-    date_key = Column(VARCHAR(8), primary_key=True, autoincrement=False)
+    date_key = Column(INTEGER, primary_key=True, autoincrement=False)
     the_date = Column(DATE, nullable=False)
     day = Column(INTEGER, nullable=False)
     month = Column(INTEGER, nullable=False)
@@ -43,8 +44,9 @@ class MonthDim(BaseWarehouse):
     __tablename__ = "month_dim"
 
     month_key = Column(INTEGER, primary_key=True)
+    month_year = Column(VARCHAR(7), nullable=False)
     month = Column(INTEGER, nullable=False)
-    quater = Column(INTEGER, nullable=False)
+    quater = Column(VARCHAR(2), nullable=False)
     year = Column(INTEGER, nullable=False)
     month_name = Column(VARCHAR(20), nullable=False)
 
@@ -79,50 +81,45 @@ class UserDim(BaseWarehouse):
     user_key = Column(INTEGER, primary_key=True)
     user_id = Column(INTEGER, nullable=False)
     display_id = Column(INTEGER)
-    display_name = Column(VARCHAR(255), nullable=False)
-    location = Column(VARCHAR(255))
-    user_demographic_key = Column(
+    display_name = Column(NVARCHAR(255), nullable=False)
+    location = Column(NVARCHAR(255))
+    current_user_demographic_key = Column(
         INTEGER,
-        ForeignKey(
-            UserDemographicDim.user_demographic_key,
-            name="fk_userDim_userDemographicDim_user_demographic_key",
-            onupdate="CASCADE",
-            ondelete="SET NULL",
-        ),
         nullable=False,
     )
     created_date_key = Column(
-        VARCHAR(8),
+        INTEGER,
         ForeignKey(
-            DateDim.date_key, name="fk_userDim_dateDim_created_date_key", onupdate="CASCADE", ondelete="SET NULL"
+            DateDim.date_key, name="fk_userDim_dateDim_created_date_key", onupdate="CASCADE", ondelete="NO ACTION"
         ),
         nullable=False,
     )
     created_time_key = Column(
         INTEGER,
         ForeignKey(
-            TimeDim.time_key, name="fk_userDim_timeDim_created_time_key", onupdate="CASCADE", ondelete="SET NULL"
+            TimeDim.time_key, name="fk_userDim_timeDim_created_time_key", onupdate="CASCADE", ondelete="NO ACTION"
         ),
         nullable=False,
     )
 
 
-class QuestionPostDim(BaseWarehouse):
-    """A metaclass for `question_post_dim` table."""
+class PostDim(BaseWarehouse):
+    """A metaclass for `post_dim` table."""
 
-    __tablename__ = "question_post_dim"
+    __tablename__ = "post_dim"
 
-    question_post_key = Column(INTEGER, primary_key=True)
-    question_post_id = Column(INTEGER, nullable=False)
-    title = Column(VARCHAR(None))
-    body = Column(VARCHAR(None))
+    post_key = Column(INTEGER, primary_key=True)
+    post_id = Column(INTEGER, nullable=False)
+    post_type = Column(VARCHAR(8), nullable=False)
+    title = Column(NVARCHAR(None))
+    body = Column(NVARCHAR(None))
     created_date_key = Column(
-        VARCHAR(8),
+        INTEGER,
         ForeignKey(
             DateDim.date_key,
-            name="fk_questionPostDim_dateDim_created_date_key",
+            name="fk_postDim_dateDim_created_date_key",
             onupdate="CASCADE",
-            ondelete="SET NULL",
+            ondelete="NO ACTION",
         ),
         nullable=False,
     )
@@ -130,9 +127,9 @@ class QuestionPostDim(BaseWarehouse):
         INTEGER,
         ForeignKey(
             TimeDim.time_key,
-            name="fk_questionPostDim_timeDim_created_time_key",
+            name="fk_postDim_timeDim_created_time_key",
             onupdate="CASCADE",
-            ondelete="SET NULL",
+            ondelete="NO ACTION",
         ),
         nullable=False,
     )
@@ -145,9 +142,9 @@ class TagDim(BaseWarehouse):
 
     tag_key = Column(INTEGER, primary_key=True)
     tag_id = Column(INTEGER, nullable=False)
-    name = Column(VARCHAR(255), nullable=False)
-    excerpt = Column(VARCHAR(None))
-    description = Column(VARCHAR(None))
+    name = Column(NVARCHAR(255), nullable=False)
+    excerpt = Column(NVARCHAR(None))
+    description = Column(NVARCHAR(None))
 
 
 class QuestionPostTagBridge(BaseWarehouse):
@@ -158,11 +155,13 @@ class QuestionPostTagBridge(BaseWarehouse):
     question_post_key = Column(
         INTEGER,
         ForeignKey(
-            QuestionPostDim.question_post_key,
-            name="fk_questionPostTagBridge_questionPostDim_question_post_key",
+            PostDim.post_key,
+            name="fk_questionPostTagBridge_postDim_question_post_key",
             onupdate="CASCADE",
             ondelete="CASCADE",
         ),
+        primary_key=True,
+        autoincrement=False,
         nullable=False,
     )
     tag_key = Column(
@@ -170,6 +169,8 @@ class QuestionPostTagBridge(BaseWarehouse):
         ForeignKey(
             TagDim.tag_key, name="fk_questionPostTagBridge_tagDim_tag_key", onupdate="CASCADE", ondelete="CASCADE"
         ),
+        primary_key=True,
+        autoincrement=False,
         nullable=False,
     )
 
@@ -180,7 +181,6 @@ class UserActivityTypeDim(BaseWarehouse):
     __tablename__ = "user_activity_type_dim"
 
     user_activity_type_key = Column(INTEGER, primary_key=True)
-    user_activity_type_id = Column(INTEGER, nullable=False)
     name = Column(VARCHAR(255), nullable=False)
     description = Column(VARCHAR(None))
 
@@ -201,23 +201,25 @@ class UserActivitiesFact(BaseWarehouse):
             UserDim.user_key, name="fk_userActivitiesFact_userDim_user_key", onupdate="CASCADE", ondelete="NO ACTION"
         ),
         primary_key=True,
+        autoincrement=False,
     )
-    question_post_key = Column(
+    post_key = Column(
         INTEGER,
         ForeignKey(
-            QuestionPostDim.question_post_key,
-            name="fk_userActivitiesFact_questionPostDim_question_post_key",
-            onupdate="CASCADE",
+            PostDim.post_key,
+            name="fk_userActivitiesFact_questionPostDim_post_key",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
         primary_key=True,
+        autoincrement=False,
     )
     user_demographic_key = Column(
         INTEGER,
         ForeignKey(
             UserDemographicDim.user_demographic_key,
             name="fk_userActivitiesFact_userDemographicDim_user_demographic_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
         nullable=False,
@@ -226,33 +228,36 @@ class UserActivitiesFact(BaseWarehouse):
         INTEGER,
         ForeignKey(
             UserActivityTypeDim.user_activity_type_key,
-            name="fk_userActivitiesFact_userActivityTypeDim_user_activity_type_key",
-            onupdate="CASCADE",
+            name="fk_userActivitiesFact_userActivityTypeDim_userActivityTypeKey",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
         primary_key=True,
+        autoincrement=False,
     )
     activity_date_key = Column(
-        VARCHAR(8),
+        INTEGER,
         ForeignKey(
             DateDim.date_key,
             name="fk_userActivitiesFact_dateDim_activity_date_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
         primary_key=True,
+        autoincrement=False,
     )
     activity_time_key = Column(
         INTEGER,
         ForeignKey(
             TimeDim.time_key,
             name="fk_userActivitiesFact_timeDim_activity_time_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
         primary_key=True,
+        autoincrement=False,
     )
-    user_activity_id = Column(INTEGER, nullable=False)
+    user_activity_id = Column(INTEGER, primary_key=True, autoincrement=False, nullable=False)
 
 
 class MonthlyUserActivitiesFact(BaseWarehouse):
@@ -269,13 +274,14 @@ class MonthlyUserActivitiesFact(BaseWarehouse):
             ondelete="NO ACTION",
         ),
         primary_key=True,
+        autoincrement=False,
     )
     user_demographic_key = Column(
         INTEGER,
         ForeignKey(
             UserDemographicDim.user_demographic_key,
-            name="fk_monthlyUserActivitiesFact_userDemographicDim_user_demographic_key",
-            onupdate="CASCADE",
+            name="fk_monthlyUserActivities_userDemographicDim_userDemographicKey",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
         nullable=False,
@@ -285,17 +291,24 @@ class MonthlyUserActivitiesFact(BaseWarehouse):
         ForeignKey(
             MonthDim.month_key,
             name="fk_monthlyUserActivitiesFact_monthDim_month_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
         primary_key=True,
+        autoincrement=False,
     )
-    total_question_posts = Column(INTEGER, default=0)
-    total_answers = Column(INTEGER, default=0)
-    total_comments = Column(INTEGER, default=0)
-    total_votes = Column(INTEGER, default=0)
-    total_activities = Column(INTEGER, default=0)
-    average_daily_activity_frequency = Column(INTEGER, default=0)
+    user_activity_type_key = Column(
+        INTEGER,
+        ForeignKey(
+            UserActivityTypeDim.user_activity_type_key,
+            name="fk_monthlyUserActivitiesFact_userActivityTypeDim_userActivityTypeKey",
+            onupdate="NO ACTION",
+            ondelete="NO ACTION",
+        ),
+        primary_key=True,
+        autoincrement=False,
+    )
+    total_count = Column(INTEGER, default=0, nullable=False)
 
 
 class QuestionPostLifeCycleFact(BaseWarehouse):
@@ -306,12 +319,13 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
     question_post_key = Column(
         INTEGER,
         ForeignKey(
-            QuestionPostDim.question_post_key,
-            name="fk_questionPostLifeCycleFact_questionPostDim_question_post_key",
-            onupdate="CASCADE",
-            ondelete="CASCADE",
+            PostDim.post_key,
+            name="fk_questionPostLifeCycleFact_postDim_question_post_key",
+            onupdate="NO ACTION",
+            ondelete="NO ACTION",
         ),
         primary_key=True,
+        autoincrement=False,
     )
     owner_user_key = Column(
         INTEGER,
@@ -327,19 +341,18 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
         INTEGER,
         ForeignKey(
             UserDemographicDim.user_demographic_key,
-            name="fk_questionPostLifeCycleFact_userDemographicDim_owner_user_demographic_key",
-            onupdate="CASCADE",
+            name="fk_questionPostLifeCycle_userDemographicDim_userDemographicKey",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
         nullable=False,
     )
-    question_post_id = Column(INTEGER, nullable=False)
     created_date_key = Column(
-        VARCHAR(8),
+        INTEGER,
         ForeignKey(
             DateDim.date_key,
             name="fk_questionPostLifeCycleFact_dateDim_created_date_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
         nullable=False,
@@ -349,17 +362,17 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
         ForeignKey(
             TimeDim.time_key,
             name="fk_questionPostLifeCycleFact_timeDim_created_time_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
         nullable=False,
     )
     first_activity_date_key = Column(
-        VARCHAR(8),
+        INTEGER,
         ForeignKey(
             DateDim.date_key,
             name="fk_questionPostLifeCycleFact_dateDim_first_activity_date_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
     )
@@ -368,16 +381,16 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
         ForeignKey(
             TimeDim.time_key,
             name="fk_questionPostLifeCycleFact_timeDim_first_activity_time_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
     )
     latest_activity_date_key = Column(
-        VARCHAR(8),
+        INTEGER,
         ForeignKey(
             DateDim.date_key,
             name="fk_questionPostLifeCycleFact_dateDim_latest_activity_date_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
     )
@@ -386,16 +399,16 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
         ForeignKey(
             TimeDim.time_key,
             name="fk_questionPostLifeCycleFact_timeDim_latest_activity_time_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
     )
     first_answer_date_key = Column(
-        VARCHAR(8),
+        INTEGER,
         ForeignKey(
             DateDim.date_key,
             name="fk_questionPostLifeCycleFact_dateDim_first_answer_date_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
     )
@@ -404,16 +417,16 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
         ForeignKey(
             TimeDim.time_key,
             name="fk_questionPostLifeCycleFact_timeDim_first_answer_time_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
     )
     accepted_answer_date_key = Column(
-        VARCHAR(8),
+        INTEGER,
         ForeignKey(
             DateDim.date_key,
             name="fk_questionPostLifeCycleFact_dateDim_accepted_answer_date_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
     )
@@ -422,16 +435,16 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
         ForeignKey(
             TimeDim.time_key,
             name="fk_questionPostLifeCycleFact_timeDim_accepted_answer_time_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
     )
     community_owned_date_key = Column(
-        VARCHAR(8),
+        INTEGER,
         ForeignKey(
             DateDim.date_key,
             name="fk_questionPostLifeCycleFact_dateDim_community_owned_date_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
     )
@@ -440,16 +453,16 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
         ForeignKey(
             TimeDim.time_key,
             name="fk_questionPostLifeCycleFact_timeDim_community_owned_time_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
     )
     closed_date_key = Column(
-        VARCHAR(8),
+        INTEGER,
         ForeignKey(
             DateDim.date_key,
             name="fk_questionPostLifeCycleFact_dateDim_closed_date_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
     )
@@ -458,10 +471,12 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
         ForeignKey(
             TimeDim.time_key,
             name="fk_questionPostLifeCycleFact_timeDim_closed_time_key",
-            onupdate="CASCADE",
+            onupdate="NO ACTION",
             ondelete="NO ACTION",
         ),
     )
+    question_post_id = Column(INTEGER, nullable=False)
+
     created_to_first_activity_time_lag = Column(INTEGER)
     created_to_first_answer_time_lag = Column(INTEGER)
     first_activity_to_latest_activity_time_lag = Column(INTEGER)
@@ -469,6 +484,7 @@ class QuestionPostLifeCycleFact(BaseWarehouse):
     created_to_accepted_answer_time_lag = Column(INTEGER)
     created_to_community_owned_time_lag = Column(INTEGER)
     created_to_closed_time_lag = Column(INTEGER)
+    score = Column(INTEGER, default=0)
     view_count = Column(INTEGER, default=0)
     answer_count = Column(INTEGER, default=0)
     comment_count = Column(INTEGER, default=0)

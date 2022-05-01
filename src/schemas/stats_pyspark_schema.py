@@ -1,6 +1,6 @@
 """This module contains information to be used when modifying dataframes in
 pyspark to get the desired schema in the destination database."""
-from .stats_schema import (Badges, Comments, PostHitories, PostLinks, Posts,
+from .stats_schema import (Badges, Comments, PostHistories, PostLinks, Posts,
                            PostsAnswers, PostsTags, Tags, Users, UsersBadges,
                            Votes)
 
@@ -84,13 +84,13 @@ post_links_columns_mapping = {
 }
 
 post_histories_columns_mapping = {
-    "Id": PostHitories.post_history_id.name,
-    "PostHistoryTypeId": PostHitories.post_history_type_id.name,
-    "PostId": PostHitories.post_id.name,
-    "RevisionGUID": PostHitories.revision_guid.name,
-    "CreationDate": PostHitories.created_time.name,
-    "UserId": PostHitories.user_id.name,
-    "Text": PostHitories.text.name,
-    "Comment": PostHitories.comment.name,
-    "UserDisplayName": PostHitories.user_display_name.name,
+    "Id": PostHistories.post_history_id.name,
+    "PostHistoryTypeId": PostHistories.post_history_type_id.name,
+    "PostId": PostHistories.post_id.name,
+    "RevisionGUID": PostHistories.revision_guid.name,
+    "CreationDate": PostHistories.created_time.name,
+    "UserId": PostHistories.user_id.name,
+    "Text": PostHistories.text.name,
+    "Comment": PostHistories.comment.name,
+    "UserDisplayName": PostHistories.user_display_name.name,
 }
